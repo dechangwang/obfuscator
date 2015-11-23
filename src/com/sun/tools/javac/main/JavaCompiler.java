@@ -1370,7 +1370,8 @@ public class JavaCompiler {
 
 		JCMethodDecl methodDecl = null;
 		for (JCTree tree : classDecl.defs) {
-			if (tree instanceof JCMethodDecl && ((JCMethodDecl) tree).name.toString().equals("main")) {
+			if (tree instanceof JCMethodDecl && ((JCMethodDecl) tree).name.toString().equals("main"))
+			{
 				methodDecl = ((JCMethodDecl) tree);
 			}
 		}
@@ -1379,6 +1380,7 @@ public class JavaCompiler {
 			public String[] target= new String[10];
 			public java.util.List<JCVariableDecl> resultList = new java.util.ArrayList<JCVariableDecl>();
 
+	
 			@Override
 			public void visitVarDef(JCVariableDecl tree) {
 				//if (tree.name.toString().equals(target))
@@ -1391,13 +1393,7 @@ public class JavaCompiler {
 		scanner1.scan(methodDecl);
 		
 		int  pos = 0;
-		/*for(JCVariableDecl t :scanner1.resultList)
-		{
-			scanner1.target[pos++] = t.name.toString();
-			scanner1.scan(methodDecl);
-		}
-		*/
-
+	
 		class FindAllReferences extends TreeScanner {
 			public JCVariableDecl target;
 			public java.util.List<JCTree> results = new java.util.ArrayList<JCTree>();
@@ -1406,20 +1402,23 @@ public class JavaCompiler {
 			public void visitIdent(JCIdent tree) {
 				if (tree.sym == target.sym)
 					results.add(tree);
-			}
+			} 
 		}
 		FindAllReferences scanner2 = new FindAllReferences();
 		String [] _replace = {"hi","hoong","wdho","his","hdishd"};
 		for(int i= 0;i<scanner1.resultList.size();i++)
 		{
+			System.out.println(scanner1.resultList.get(i));
 			scanner2.target = scanner1.resultList.get(i);
 			scanner2.scan(methodDecl);
 
 			Table table = scanner2.target.sym.name.table;
 			scanner2.target.sym.name = table.fromString(_replace[i]);
 			scanner2.target.name = table.fromString(_replace[i]);
+			
 			for (JCTree tree : scanner2.results) {
 				JCIdent id = (JCIdent) tree;
+				if(id.name.equals(scanner2.target.sym.name))
 				id.name = table.fromString(_replace[i]);
 			}
 
