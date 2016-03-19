@@ -1425,6 +1425,48 @@ public class JavaCompiler {
 		}
 		
 		System.out.println(classDecl);
+		JCMethodDecl methodDecl = null;
+        // for (JCTree tree : classDecl.defs) {
+        //     if (tree instanceof JCMethodDecl
+        //             && ((JCMethodDecl) tree).name.toString().equals("main")) {
+        //         methodDecl = ((JCMethodDecl) tree);
+        //     }
+        // }
+
+        // List<JCStatement> list = methodDecl.body.stats;
+        // for (int i = 0; i < 1; i++) {
+        //     list = list.tail.tail;
+        //     JCIf stat = (JCIf) list.head;
+        // }
+
+        // JCIf statIF = (JCIf) list.head;
+        // JCExpression statCond = statIF.cond;
+        // TreeMaker factory = TreeMaker.instance(context);
+        // JCUnary jcUnary = factory.Unary(JCTree.Tag.NOT, statCond);
+        
+        // JCModifiers mods = null;
+        // Name name = factory.paramName(6);   
+        // com.sun.tools.javac.code.Type t = new com.sun.tools.javac.code.Type(null){
+
+        //     @Override
+        //     public TypeTag getTag() {
+        //         // TODO Auto-generated method stub
+        //         return null;
+        //     }
+            
+        // };
+        // JCExpression vartype = factory.Type(TypeTag.CHAR);
+        // JCExpression init = null;
+        
+        // JCVariableDecl jcVariable = factory.VarDef(mods, name, vartype, init);
+
+        // jcUnary.type = statCond.type;
+        // CallResolve CresolveC = new CallResolve(context, env, jcUnary.type);
+        // Symbol symbol = CresolveC.getSysbol();
+
+        // factory.Select(statCond, symbol);
+        // jcUnary.operator = symbol;
+        // statIF.cond = jcUnary;
 
     	
 
