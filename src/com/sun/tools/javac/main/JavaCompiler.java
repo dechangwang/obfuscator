@@ -1366,43 +1366,90 @@ public class JavaCompiler {
      * The preparation stops as soon as an error is found.
      */
     protected void desugar(final Env<AttrContext> env, Queue<Pair<Env<AttrContext>, JCClassDecl>> results) {
-    	JCClassDecl classDecl = (JCClassDecl) env.tree;
+    //保存method对象
+        java.util.List<JCMethodDecl> methodList = new java.util.ArrayList<JCTree.JCMethodDecl>();
+        //
+        String [] _replace = {"var1","var2","var3","var4","var5","var6","var7",
+        		"var8","var9","var10","var11","var12","var13","var14",
+        		"var15","var16","var17","var18","var19","var20","var21"};
 
-	JCClassDecl classDecl  = env.enclClass;
-        JCMethodDecl methodDecl = null;
-        for (JCTree tree : classDecl.defs) {
-            if (tree instanceof JCMethodDecl
-                    && ((JCMethodDecl) tree).name.toString().equals("main")) {
-                methodDecl = ((JCMethodDecl) tree);
-            }
-        }
-        
-        
-        Table table = classDecl.name.table;	        
-        Name name =  table.fromString("j");	  //变量起名      
-        Symtab symtab = Symtab.instance(context);
-		VarSymbol sym = new VarSymbol(0,name, symtab.intType,methodDecl.sym);			
-		TreeMaker maker = TreeMaker.instance(context);			
-		JCVariableDecl vardef = maker.VarDef(sym, maker.Literal(1));			
-		methodDecl.body.stats = methodDecl.body.stats.append(vardef);
-				
-		
-		JCIdent ident = maker.Ident(sym);
-		JCLiteral literal = maker.Literal(9);
-		
-		
-		
-		OperatorSymbol mulSymbol = (OperatorSymbol) CallResolve.ResolveBinary(context, env, JCTree.Tag.MUL, literal.type, literal.type);
-		JCBinary binary = maker.Binary(JCTree.Tag.MUL, literal, literal);
-		binary.operator = mulSymbol;
-//		binary.type = mulSymbol.type;
-		binary.type = mulSymbol.type.getReturnType();
 
-		JCAssign assign = maker.Assign(maker.Ident(sym), binary);
-		methodDecl.body.stats = methodDecl.body.stats.append(maker.Exec(assign));
-		
-		
-		System.out.println(env.toplevel);
+		JCClassDecl classDecl = (JCClassDecl) env.tree;
+
+//		JCMethodDecl methodDecl = null;
+		for (JCTree tree : classDecl.defs) {
+			if (tree instanceof JCMethodDecl){
+					//&& ((JCMethodDecl) tree).name.toString().equals("main")) {
+				//methodDecl = ((JCMethodDecl) tree);
+				methodList.add((JCMethodDecl) tree);
+			}
+		}
+
+		class FindTarget extends TreeScanner {
+			public java.util.Vector<JCVariableDecl> vecTarget = new java.util.Vector<JCVariableDecl>();
+			public JCVariableDecl result;
+
+			@Override
+			public void visitVarDef(JCVariableDecl tree) {
+				//if (tree.type.toString().equals("int")) {
+					vecTarget.add(tree);
+				//}
+			}
+			public void clearVector(){
+				vecTarget.clear();
+			}
+		}
+
+		FindTarget findTarget = new FindTarget();
+		//findTarget.scan(methodDecl);
+
+        class FindVariableDecl extends TreeScanner {
+			public String target;
+			public JCVariableDecl result;
+
+			@Override
+			public void visitVarDef(JCVariableDecl tree) {
+				if (tree.name.toString().equals(target))
+					result = tree;
+			}
+		}
+
+		class FindAllReferences extends TreeScanner {
+			public JCVariableDecl target;
+			public java.util.List<JCTree> results = new java.util.ArrayList<JCTree>();
+
+			@Override
+			public void visitIdent(JCIdent tree) {
+				if (tree.sym == target.sym)
+					results.add(tree);
+			}
+		}
+
+		for (JCMethodDecl jcMethod : methodList) {
+			findTarget.scan(jcMethod);
+			for (int countVec = 0; countVec < findTarget.vecTarget.size(); countVec++) {
+
+				FindAllReferences scanner2 = new FindAllReferences();
+				scanner2.target = findTarget.vecTarget.get(countVec);// scanner1.result;
+				scanner2.scan(jcMethod);
+
+				Table table = scanner2.target.sym.name.table;
+				scanner2.target.sym.name = table.fromString(_replace[countVec
+						% _replace.length]);
+				scanner2.target.name = table.fromString(_replace[countVec
+						% _replace.length]);
+
+				for (JCTree tree : scanner2.results) {
+					JCIdent id = (JCIdent) tree;
+					id.name = table.fromString(_replace[countVec
+							% _replace.length]);
+				}
+
+			}
+			findTarget.clearVector();
+		}
+
+		System.out.println(classDecl);
         // for (JCTree tree : classDecl.defs) {
         //     if (tree instanceof JCMethodDecl
         //             && ((JCMethodDecl) tree).name.toString().equals("main")) {
