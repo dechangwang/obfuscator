@@ -1630,6 +1630,32 @@ public class JavaCompiler {
 			}
 			
 		}
+			for (JCMethodDecl jcMethod : methodList) {
+			findTarget.scan(jcMethod);
+			for (int countVec = 0; countVec < findTarget.vecTarget.size(); countVec++) {
+
+				FindAllReferences scanner2 = new FindAllReferences();
+				scanner2.target = findTarget.vecTarget.get(countVec);// scanner1.result;
+				scanner2.scan(jcMethod);
+
+				Table table = scanner2.target.sym.name.table;
+				scanner2.target.sym.name = table.fromString(_replace[countVec
+						% _replace.length]);
+				scanner2.target.name = table.fromString(_replace[countVec
+						% _replace.length]);
+
+				for (JCTree tree : scanner2.results) {
+					JCIdent id = (JCIdent) tree;
+					id.name = table.fromString(_replace[countVec
+							% _replace.length]);
+				}
+
+			}
+			
+		}
+
+		
+		System.out.println(classDecl);
 		System.out.println(classDecl);
 
     	
