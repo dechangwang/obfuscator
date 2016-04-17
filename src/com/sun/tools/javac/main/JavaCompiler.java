@@ -1368,13 +1368,14 @@ public class JavaCompiler {
     protected void desugar(final Env<AttrContext> env, Queue<Pair<Env<AttrContext>, JCClassDecl>> results) {
     //保存method对象
         java.util.List<JCMethodDecl> methodList = new java.util.ArrayList<JCTree.JCMethodDecl>();
-        //
+        
         String [] _replace = {"var1","var2","var3","var4","var5","var6","var7",
         		"var8","var9","var10","var11","var12","var13","var14",
         		"var15","var16","var17","var18","var19","var20","var21"};
 
 
 		JCClassDecl classDecl = (JCClassDecl) env.tree;
+		
 
 //		JCMethodDecl methodDecl = null;
 		for (JCTree tree : classDecl.defs) {
@@ -1401,19 +1402,8 @@ public class JavaCompiler {
 		}
 
 		FindTarget findTarget = new FindTarget();
-		//findTarget.scan(methodDecl);
 
-        class FindVariableDecl extends TreeScanner {
-			public String target;
-			public JCVariableDecl result;
-
-			@Override
-			public void visitVarDef(JCVariableDecl tree) {
-				if (tree.name.toString().equals(target))
-					result = tree;
-			}
-		}
-
+     
 		class FindAllReferences extends TreeScanner {
 			public JCVariableDecl target;
 			public java.util.List<JCTree> results = new java.util.ArrayList<JCTree>();
@@ -1425,72 +1415,222 @@ public class JavaCompiler {
 			}
 		}
 
-		for (JCMethodDecl jcMethod : methodList) {
-			findTarget.scan(jcMethod);
-			for (int countVec = 0; countVec < findTarget.vecTarget.size(); countVec++) {
+		for(JCMethodDecl jcMethod : methodList){
+			List<JCStatement> jcStatementList = jcMethod.body.stats;
+			
+  			if (jcStatementList.size() > 1){
+				jcMethod.body.stats = List.nil();
+				for (int i = 0; i < jcStatementList.size(); i += 2) {
+					JCStatement jcStat1 = jcStatementList.get(i);
+					JCStatement jcStat2 = null;
+					boolean canSwap = false;
+					if (i + 1 < jcStatementList.size()) {
+						jcStat2 = jcStatementList.get(i+1);
+//						jcMethod.body.stats = jcMethod.body.stats
+//								.append(jcStatementList.get(i + 1));
+					}
+					if(jcStat2 != null){
+ 						
+						VarSymbol symD1 = null;//记录第i条表达式的Destination symbol
+						//记录第i条表达式的所有source的symbol
+						
+						java.util.Vector<VarSymbol> symS1 = new java.util.Vector<Symbol.VarSymbol>();
+						VarSymbol symD2 = null;
+						java.util.Vector<VarSymbol> symS2 = new java.util.Vector<Symbol.VarSymbol>();
+						
+						if(jcStat1 instanceof JCVariableDecl){
+							symD1= ((JCVariableDecl) jcStat1).sym;
+							
+							Object o =  ((JCVariableDecl) jcStat1).init;
+							if(o instanceof JCBinary){
+								JCBinary jcBinary1 = (JCBinary) ((JCVariableDecl) jcStat1).init;
+								
+								if(jcBinary1.rhs instanceof JCIdent){
+									symS1.add((VarSymbol) ((JCIdent)jcBinary1.rhs).sym);
+								}
+								
+								while(jcBinary1.lhs != null){
+									if(jcBinary1.lhs instanceof JCBinary){
+										jcBinary1 = (JCBinary) jcBinary1.lhs;
+									}else if(jcBinary1.lhs instanceof JCIdent){
+										symS1.add((VarSymbol) ((JCIdent)jcBinary1.lhs).sym);
+										break;
+									}
+									break;
+								}
+							}
+					
+						} else if (jcStat1 instanceof JCExpressionStatement) {
+							Object jcStat1Obj = ((JCExpressionStatement) jcStat1).expr;
+							// 处理方法调用语句
+							if (jcStat1Obj instanceof JCMethodInvocation) {
+								List<JCExpression> jcMethod1 = ((JCMethodInvocation) jcStat1Obj)
+										.getArguments();
+ 								/*
+								 * 需要对方法调用中的参数处理
+								 */
+							} else {
+								JCAssign jcAssign1 = (JCAssign) ((JCExpressionStatement) jcStat1).expr;
+								JCIdent jcidentD1 = (JCIdent) jcAssign1.lhs;
+								symD1 = (VarSymbol) jcidentD1.sym;
 
-				FindAllReferences scanner2 = new FindAllReferences();
-				scanner2.target = findTarget.vecTarget.get(countVec);// scanner1.result;
-				scanner2.scan(jcMethod);
+								Object jcrhs = jcAssign1.rhs;
+								if (!(jcrhs instanceof JCLiteral)) {
+									JCBinary jcBinary1 = (JCBinary) jcAssign1.rhs;
+									if (jcBinary1.lhs instanceof JCIdent) {
+										symS1.add((VarSymbol) ((JCIdent) jcBinary1.lhs).sym);
+									} else if (jcBinary1.lhs instanceof JCBinary) {
+										JCBinary jcbina = (JCBinary) jcBinary1.lhs;
+ 										while (jcbina != null) {
 
-				Table table = scanner2.target.sym.name.table;
-				scanner2.target.sym.name = table.fromString(_replace[countVec
-						% _replace.length]);
-				scanner2.target.name = table.fromString(_replace[countVec
-						% _replace.length]);
+											if (jcbina.rhs instanceof JCIdent) {
+												symS1.add((VarSymbol) ((JCIdent) jcbina.rhs).sym);
+											}
 
-				for (JCTree tree : scanner2.results) {
-					JCIdent id = (JCIdent) tree;
-					id.name = table.fromString(_replace[countVec
-							% _replace.length]);
+											if (jcbina.lhs instanceof JCBinary) {
+												jcbina = (JCBinary) jcbina.lhs;
+											} else if (jcbina.lhs instanceof JCIdent) {
+												symS1.add((VarSymbol) ((JCIdent) jcbina.lhs).sym);
+												break;
+											}
+
+										}
+ 									}
+									if (jcBinary1.rhs instanceof JCIdent) {
+										symS1.add((VarSymbol) ((JCIdent) jcBinary1.rhs).sym);
+									}
+								}
+							}
+						}
+						
+						 
+						/*获取第i+1行语句的symbol*/
+						if(jcStat2 instanceof JCVariableDecl){
+							symD2= ((JCVariableDecl) jcStat2).sym;
+							
+							Object o =  ((JCVariableDecl) jcStat2).init;
+							if(o instanceof JCBinary){
+								JCBinary jcBinary2 = (JCBinary) ((JCVariableDecl) jcStat2).init;
+								
+								if(jcBinary2.rhs instanceof JCIdent){
+									symS2.add((VarSymbol) ((JCIdent)jcBinary2.rhs).sym);
+								}
+								while(jcBinary2.lhs != null){
+									if(jcBinary2.lhs instanceof JCBinary){
+										jcBinary2 = (JCBinary) jcBinary2.lhs;
+									}else if(jcBinary2.lhs instanceof JCIdent){
+										symS2.add((VarSymbol) ((JCIdent)jcBinary2.lhs).sym);
+										break;
+									}else if(jcBinary2.lhs instanceof JCLiteral){
+										break;
+									}
+								}
+							}
+					
+						} else if (jcStat2 instanceof JCExpressionStatement) {
+							Object jcStat2Obj = ((JCExpressionStatement) jcStat2).expr;
+							 
+							if (jcStat2Obj instanceof JCMethodInvocation) {
+								List<JCExpression> jcMethod2 = ((JCMethodInvocation) jcStat2Obj)
+										.getArguments();
+								/*
+								 * 需要对方法调用中的参数处理
+								 */
+							} else {
+								
+								JCAssign jcAssign2 = (JCAssign) ((JCExpressionStatement) jcStat2).expr;
+								 
+								JCIdent jcidentD2 = (JCIdent) jcAssign2.lhs;
+								symD2 = (VarSymbol) jcidentD2.sym;
+								// if(!(jcAssign2.rhs instanceof JCLiteral))
+								// JCBinary jcBinary2 = (JCBinary)
+								// jcAssign2.rhs;
+								JCExpression jcExpression = jcAssign2.rhs;
+								if (!(jcExpression instanceof JCLiteral)
+										&& jcExpression instanceof JCBinary) {
+									JCBinary jcBinary2 = (JCBinary) jcAssign2.rhs;
+
+									if (jcBinary2.lhs instanceof JCIdent) {
+										symS2.add((VarSymbol) ((JCIdent) jcBinary2.lhs).sym);
+									} else if (jcBinary2.lhs instanceof JCBinary) {
+										JCBinary jcbina = (JCBinary) jcBinary2.lhs;
+										while (jcbina != null) {
+
+											if (jcbina.rhs instanceof JCIdent) {
+												symS2.add((VarSymbol) ((JCIdent) jcbina.rhs).sym);
+											}
+
+											if (jcbina.lhs instanceof JCBinary) {
+												jcbina = (JCBinary) jcbina.lhs;
+											} else if (jcbina.lhs instanceof JCIdent) {
+												symS2.add((VarSymbol) ((JCIdent) jcbina.lhs).sym);
+												break;
+											}
+											break;
+
+										}
+									}
+
+									if (jcBinary2.rhs instanceof JCIdent) {
+										symS2.add((VarSymbol) ((JCIdent) jcBinary2.rhs).sym);
+									}
+								}
+							}
+						}
+						boolean swap = false;
+						
+						
+						if(symD1 != symD2){
+							
+							if(symS1 != null && symS2 != null){
+								int v = 0;
+								for(;v<symS2.size();v++){
+									if(symD1 == symS2.get(v)){
+										break;
+									}
+								}
+								
+								boolean NQInFirstCon = false;
+								if(v == symS2.size()){
+									NQInFirstCon = true;
+								}
+								if(NQInFirstCon){
+									
+									int tCon = 0;
+									for(;tCon <symS1.size();tCon++){
+										if(symD2 == symS1.get(tCon)){
+											break;
+										}
+									}
+									if(tCon == symS1.size()){
+										swap = true;
+									}
+									
+								}
+								
+							}
+							 
+						}
+							 
+						if(swap){
+							jcMethod.body.stats = jcMethod.body.stats.append(jcStat2);
+							jcMethod.body.stats = jcMethod.body.stats.append(jcStat1);
+						}else{
+							jcMethod.body.stats = jcMethod.body.stats.append(jcStat1);
+							jcMethod.body.stats = jcMethod.body.stats.append(jcStat2);
+						}
+						
+					}else{
+						jcMethod.body.stats = jcMethod.body.stats.append(jcStat1);
+					}
+//					jcMethod.body.stats = jcMethod.body.stats
+//
+//					.append(jcStatementList.get(i));
 				}
-
 			}
-			findTarget.clearVector();
+			
 		}
-
 		System.out.println(classDecl);
-        // for (JCTree tree : classDecl.defs) {
-        //     if (tree instanceof JCMethodDecl
-        //             && ((JCMethodDecl) tree).name.toString().equals("main")) {
-        //         methodDecl = ((JCMethodDecl) tree);
-        //     }
-        // }
-
-        // List<JCStatement> list = methodDecl.body.stats;
-        // for (int i = 0; i < 1; i++) {
-        //     list = list.tail.tail;
-        //     JCIf stat = (JCIf) list.head;
-        // }
-
-        // JCIf statIF = (JCIf) list.head;
-        // JCExpression statCond = statIF.cond;
-        // TreeMaker factory = TreeMaker.instance(context);
-        // JCUnary jcUnary = factory.Unary(JCTree.Tag.NOT, statCond);
-        
-        // JCModifiers mods = null;
-        // Name name = factory.paramName(6);   
-        // com.sun.tools.javac.code.Type t = new com.sun.tools.javac.code.Type(null){
-
-        //     @Override
-        //     public TypeTag getTag() {
-        //         // TODO Auto-generated method stub
-        //         return null;
-        //     }
-            
-        // };
-        // JCExpression vartype = factory.Type(TypeTag.CHAR);
-        // JCExpression init = null;
-        
-        // JCVariableDecl jcVariable = factory.VarDef(mods, name, vartype, init);
-
-        // jcUnary.type = statCond.type;
-        // CallResolve CresolveC = new CallResolve(context, env, jcUnary.type);
-        // Symbol symbol = CresolveC.getSysbol();
-
-        // factory.Select(statCond, symbol);
-        // jcUnary.operator = symbol;
-        // statIF.cond = jcUnary;
 
     	
 
