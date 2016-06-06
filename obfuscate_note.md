@@ -14,3 +14,11 @@
 + at line 1569```JCTree untranslated = env.tree``` 查看untranslated中的值，此时的sym为ClassSymbol进一步展开sym 有members_field参数，会发现class中所有的属性以及方法均在这里（也就是说 class中对于属性和方法都当作成员处理
 
 *在执行完自定义的混淆代码语句后 从逐步执行的结果来看 desugar方法是编译时期最后执行的（只针对单个class）*
+
+####JavaCompiler中的compile2（）方法中有如下代码片段，在todo中保存中所有简要编译的类的信息
+```java
+	case BY_TODO:
+				while (!todo.isEmpty())
+					generate(desugar(flow(attribute(todo.remove()))));
+				break;
+```
